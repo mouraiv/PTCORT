@@ -38,7 +38,7 @@ class MapaCEF:
         
         cef.Shutdown()
 
-    def criar_mapa(self, lat, lon, callback):
+    def criar_mapa(self, lat, lon, callback_coords=None, callback_info=None):
         # Criar o mapa HTML
         mapa = folium.Map(location=[lat, lon], zoom_start=15)
         folium.Marker(
@@ -48,7 +48,6 @@ class MapaCEF:
         ).add_to(mapa)
         
         script = f"""
-        <script>
         const linhaSelecionada = [];
 
         function criarRadio() {{
@@ -58,18 +57,18 @@ class MapaCEF:
             radio.dataset.checked = "false";
 
             radio.addEventListener("click", function () {{
-            if (this.dataset.checked === "true") {{
-                this.checked = false;
-                this.dataset.checked = "false";
-                linhaSelecionada.length = 0;
-            }} else {{
-                document.querySelectorAll("input[name='grupo-radio']").forEach(r => {{
-                r.dataset.checked = "false";
-                }});
+                if (this.dataset.checked === "true") {{
+                    this.checked = false;
+                    this.dataset.checked = "false";
+                    linhaSelecionada.length = 0;
+                }} else {{
+                    document.querySelectorAll("input[name='grupo-radio']").forEach(r => {{
+                        r.dataset.checked = "false";
+                    }});
 
-                this.dataset.checked = "true";
-                coletarLinhaSelecionada(this);
-            }}
+                    this.dataset.checked = "true";
+                    coletarLinhaSelecionada(this);
+                }}
             }});
 
             return radio;
@@ -81,57 +80,61 @@ class MapaCEF:
 
             linhaSelecionada.length = 0;
             for (let i = 1; i < tds.length; i++) {{
-            linhaSelecionada.push(tds[i].textContent.trim());
+                linhaSelecionada.push(tds[i].textContent.trim());
             }}
 
             console.log("Linha selecionada:", linhaSelecionada);
+            if (window.updateInfo) {{
+                window.updateInfo(linhaSelecionada);
+            }}
         }}
 
         fetch("http://localhost:5000/enderecos")
             .then(res => res.json())
             .then(dados => {{
-            const tabela = document.getElementById("tabela-enderecos");
-            const tipos = ["cep_correios", "opem_street", "dbc_logradouro"];
+                const tabela = document.getElementById("tabela-enderecos");
+                const tipos = ["cep_correios", "opem_street", "dbc_logradouro"];
 
-            tipos.forEach(tipo => {{
-                const dadosTipo = dados.find(item => item[tipo])?.[tipo] || [];
-                const headerRow = tabela.querySelector(`.header-${{tipo}}`);
+                tipos.forEach(tipo => {{
+                    const itemEncontrado = dados.find(item => item[tipo]);
+                    const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
+                    const headerRow = tabela.querySelector(`.header-${{tipo}}`);
 
-                dadosTipo.forEach(linha => {{
-                const tr = document.createElement("tr");
+                    dadosTipo.forEach(linha => {{
+                        const tr = document.createElement("tr");
 
-                const tdRadio = document.createElement("td");
-                const radio = criarRadio();
-                tdRadio.appendChild(radio);
-                tr.appendChild(tdRadio);
+                        const tdRadio = document.createElement("td");
+                        const radio = criarRadio();
+                        tdRadio.appendChild(radio);
+                        tr.appendChild(tdRadio);
 
-                linha.forEach(valor => {{
-                    const td = document.createElement("td");
-                    td.textContent = valor;
-                    tr.appendChild(td);
+                        linha.forEach(valor => {{
+                            const td = document.createElement("td");
+                            td.textContent = valor;
+                            tr.appendChild(td);
+                        }});
+
+                        headerRow.insertAdjacentElement("afterend", tr);
+                    }});
                 }});
-
-                headerRow.insertAdjacentElement("afterend", tr);
-                }});
-            }});
             }})
             .catch((erro) => {{
-            console.error("Erro ao buscar dados:", erro);
+                console.error("Erro ao buscar dados:", erro);
             }});
-            document.addEventListener('DOMContentLoaded', function() {{
-                var map = {{mapa.get_name()}};
-                Object.values(map._layers).forEach(layer => {{
-                    if (layer instanceof L.Marker) {{
-                        layer.on('dragend', function(e) {{
-                            var latlng = e.target.getLatLng();
-                            if (window.updateCoords) {{
-                                window.updateCoords(latlng.lat, latlng.lng);
-                            }}
-                        }});
-                    }}
-                }});
+
+        document.addEventListener('DOMContentLoaded', function() {{
+            var map = {{mapa.get_name()}};
+            Object.values(map._layers).forEach(layer => {{
+                if (layer instanceof L.Marker) {{
+                    layer.on('dragend', function(e) {{
+                        var latlng = e.target.getLatLng();
+                        if (window.updateCoords) {{
+                            window.updateCoords(latlng.lat, latlng.lng);
+                        }}
+                    }});
+                }}
             }});
-        </script>
+        }});
         """
         mapa.get_root().html.add_child(folium.Element(script))
         #mapa.save(self.map_file_path)
@@ -141,23 +144,16 @@ class MapaCEF:
             if self.browser:
                 self.browser.CloseBrowser()
                 self.browser = None
-            
-            bindings = cef.JavascriptBindings()
-            bindings.SetFunction("updateCoords", callback)
-            
+
             window_info = cef.WindowInfo()
             window_info.SetAsPopup(0, "Mapa Interativo")
-
-            import os
-
+            
             # Suponha que o arquivo esteja em um subdiretório do diretório atual
             base_dir = os.path.dirname(os.path.abspath(__file__))  # Caminho do script atual
             map_file_path = os.path.join(base_dir, "html", self.map_file_path)
 
             # Converte o caminho para o formato de URL de arquivo
             map_file_url = f"file:///{map_file_path.replace(os.sep, '/')}"
-
-            print(map_file_url)
             
             self.browser = cef.CreateBrowserSync(
                 window_info=window_info,
@@ -165,10 +161,18 @@ class MapaCEF:
                 settings={
                     "file_access_from_file_urls_allowed": True,
                     "universal_access_from_file_urls_allowed": True,
+                    "web_security_disabled": False,
                 }
             )
+
+            bindings = cef.JavascriptBindings()
+            bindings.SetFunction("updateCoords", callback_coords)
+            bindings.SetFunction("updateInfo", callback_info)
             self.browser.SetJavascriptBindings(bindings)
-        
+
+            # Abre DevTools para depuração
+            self.browser.ShowDevTools()
+            
         self.command_queue.put(_abrir_janela)
 
     def fechar(self):

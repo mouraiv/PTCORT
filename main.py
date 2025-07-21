@@ -88,13 +88,16 @@ class Application(tk.Tk):
         self.lat.set(lat)
         self.lon.set(lng)
         print(f"Coordenadas atualizadas: {lat}, {lng}")
+
+    def tratar_selecao_linha(self, dados_linha):
+        print(f"Linha selecionada: {dados_linha}")
     
     def abrir_mapa(self):
         try:
             lat = float(self.lat.get())
             lon = float(self.lon.get())
             self.chamada_api()
-            self.mapa.criar_mapa(lat, lon, self.atualizar_coordenadas)
+            self.mapa.criar_mapa(lat, lon, callback_coords=self.atualizar_coordenadas, callback_info=self.tratar_selecao_linha)
         except ValueError:
             messagebox.showerror("Erro", "Por favor, insira coordenadas válidas!")
     
