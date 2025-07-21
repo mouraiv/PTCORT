@@ -50,6 +50,10 @@ class MapaCEF:
         script = f"""
         const linhaSelecionada = [];
 
+        setTimeout(function() {{
+            map.setZoom(18);
+        }}, 500);
+
         function criarRadio() {{
             const radio = document.createElement("input");
             radio.type = "radio";
@@ -121,7 +125,7 @@ class MapaCEF:
             .catch((erro) => {{
                 console.error("Erro ao buscar dados:", erro);
             }});
-
+            
         document.addEventListener('DOMContentLoaded', function() {{
             var map = {{mapa.get_name()}};
             Object.values(map._layers).forEach(layer => {{
@@ -134,6 +138,12 @@ class MapaCEF:
                     }});
                 }}
             }});
+        }});
+        document.addEventListener('DOMContentLoaded', function() {{
+            var map = {{mapa.get_name()}};
+            setTimeout(function() {{
+                map.setZoom(18);
+            }}, 500);
         }});
         """
         mapa.get_root().html.add_child(folium.Element(script))

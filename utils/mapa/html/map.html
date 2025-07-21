@@ -19,7 +19,7 @@
             <style>
                 #map_c8d7370c7af138f5d2b539c5578bba11 {
                     position: relative;
-                    width: 65%;
+                    width: 60%;
                     height: 100%;
                     left: 0.0%;
                     top: 0.0%;
@@ -37,9 +37,35 @@
                 background-color: #e7e7e7;
             }
             #navbar {
-                width: 35%;
+                width: 45%;
                 position: relative;
                 padding: 10px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            th {
+                background-color: #3f3f3f;
+                font-weight: bold;
+                font-size: 1.1rem;
+                color: white;
+            }
+            td{
+                font-size: 1.3rem;
+            }
+            .header-cep_correios, .header-opem_street, .header-dbc_logradouro {
+                background-color: #e0e0e0;
+                font-weight: bold;
+            }
+            input[type="radio"] {
+                margin-right: 5px;
+                cursor: pointer;
             }
             </style>
 
@@ -74,6 +100,12 @@
                     }
                 });
             });
+            document.addEventListener('DOMContentLoaded', function() {
+                var map = map_c8d7370c7af138f5d2b539c5578bba11;
+                setTimeout(function() {
+                    map.setZoom(18);
+                }, 500);
+            })
         </script>
             <div class="folium-map" id="map_c8d7370c7af138f5d2b539c5578bba11" ></div>
             <div id="navbar">
@@ -82,7 +114,7 @@
                     <th colspan="6">CEP CORREIOS</th>
                 </tr>
                 <tr class="header-cep_correios">
-                    <td></td>
+                    <td>#</td>
                     <td>Endereço</td>
                     <td>Bairro</td>
                     <td>Município</td>
@@ -94,7 +126,7 @@
                     <th colspan="6">OPENSTREET</th>
                 </tr>
                 <tr class="header-opem_street">
-                    <td></td>
+                    <td>#</td>
                     <td>Endereço</td>
                     <td>Bairro</td>
                     <td>Município</td>
@@ -106,7 +138,7 @@
                     <th colspan="6">DBC LOGRADOURO</th>
                 </tr>
                 <tr class="header-dbc_logradouro">
-                    <td></td>
+                    <td>#</td>
                     <td>Endereço</td>
                     <td>Bairro</td>
                     <td>Município</td>
