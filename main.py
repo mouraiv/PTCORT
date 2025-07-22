@@ -4,7 +4,6 @@ from tkinter import messagebox
 
 import requests
 
-from utils.mapa.api.index import unificar_enderecos
 from utils.mapa.main import MapaCEF
 from utils.mapa.server.index import server_api
 
@@ -24,29 +23,9 @@ class Application(tk.Tk):
         # Inicia o servidor Flask em uma thread separada
         threading.Thread(target=self.iniciar_servidor, daemon=True).start()
 
-    def chamada_api(self):
-        # Configurações
-        api_geocorp_url = "http://geocorp3.telemar:85/CEP.asp"
-        api_osm_url = "https://nominatim.openstreetmap.org/reverse"
-        cep = "20211178"
-        lat = -22.912251
-        lon = -43.206493
-        cep_aberto_token = "d40efb650d1963b7546a6df9ebde4943"
-        db_instance_uf = "RJ"
-
-        # Chamada
-        dados_enderecos = unificar_enderecos(
-            api_geocorp_url,
-            api_osm_url,
-            cep,
-            lat,
-            lon,
-            db_instance_uf,
-            cep_aberto_token
-        )
-
+    def chamada_api(self, lat=None, lon=None):
         try:
-            response = requests.post("http://localhost:5000/enderecos", json=dados_enderecos)
+            response = requests.post("http://localhost:5000/enderecos", json={"lat": lat, "lon": lon})
             response.raise_for_status()
             print("Resposta da API:", response.json())
 
@@ -94,10 +73,10 @@ class Application(tk.Tk):
     
     def abrir_mapa(self):
         try:
-            lat = float(self.lat.get())
-            lon = float(self.lon.get())
-            self.chamada_api()
-            self.mapa.criar_mapa(lat, lon, callback_coords=self.atualizar_coordenadas, callback_info=self.tratar_selecao_linha)
+            lat = float(self.lat.get() if self.lat.get() else -22.9068)
+            lon = float(self.lon.get() if self.lon.get() else -43.1729)
+            self.chamada_api(lat, lon)
+            self.mapa.criar_mapa(lat, lon, callback_info=self.tratar_selecao_linha)
         except ValueError:
             messagebox.showerror("Erro", "Por favor, insira coordenadas válidas!")
     

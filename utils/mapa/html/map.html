@@ -14,207 +14,228 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
     
-            <meta name="viewport" content="width=device-width,
-                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-            <style>
-                #map_c8d7370c7af138f5d2b539c5578bba11 {
-                    position: relative;
-                    width: 60%;
-                    height: 100%;
-                    left: 0.0%;
-                    top: 0.0%;
-                    border-right: 1px solid #000;
-                }
-                .leaflet-container { font-size: 1rem; }
-            </style>
+    <meta name="viewport" content="width=device-width,
+        initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>
+        #map_c8d7370c7af138f5d2b539c5578bba11 {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            left: 0.0%;
+            top: 0.0%;
+            border-right: 1px solid #000;
+        }
+        .leaflet-container { font-size: 1rem; }
+    </style>
 
-            <style>html, body {
-                display: flex;
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-                background-color: #e7e7e7;
-            }
-            #navbar {
-                width: 45%;
-                position: relative;
-                padding: 10px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th, td {
-                padding: 8px;
-                text-align: left;
-                border-bottom: 1px solid #ddd;
-            }
-            th {
-                background-color: #3f3f3f;
-                font-weight: bold;
-                font-size: 1.1rem;
-                color: white;
-            }
-            td{
-                font-size: 1.3rem;
-            }
-            .header-cep_correios, .header-opem_street, .header-dbc_logradouro {
-                background-color: #e0e0e0;
-                font-weight: bold;
-            }
-            input[type="radio"] {
-                margin-right: 5px;
-                cursor: pointer;
-            }
-            </style>
+    <style>
+    html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: #e7e7e7;
+    }
 
-            <style>#map {
-                position:absolute;
-                top:0;
-                bottom:0;
-                right:0;
-                left:0;
-                }
-            </style>
+    .container {
+        display: flex;
+        height: 100%;
+        max-width: 100%;
+        min-width: 1220px;
+        margin: 0;
+        padding: 0;
+    }
+    #navbar {
+        width: 60%;
+        position: relative;
+        padding: 10px;
+    }
+    table {
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    th {
+        background-color: #3f3f3f;
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: white;
+    }
+    td{
+        font-size: 1.3rem;
+        text-align: center;
+    }
+    .header-cep_correios, .header-opem_street, .header-dbc_logradouro {
+        background-color: #e0e0e0;
+        font-weight: bold;
+    }
+    input[type="radio"] {
+        margin-right: 5px;
+        cursor: pointer;
+    }
+    input[type="text"] {
+        width: 82%;
+        padding: 8px;
+        margin-bottom: 0;
+        border: 1px solid #ccc;
+    }
+    button {
+        padding: 8px;
+        width: 18%;
+        background-color: #3f3f3f;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    button:active {
+        background-color: #a5a5a5;
+        color: #000;
+    }
+    #info{
+        height: 90%;
+    }
+    #carregando {
+        position: absolute;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        background-color: #f7f7f7;
+        font-size: 12px;
+        padding-top: 1rem;
+        width: 40%;
+        font-weight: 600;
+        color: #3f3f3f;
+        border: 1px solid #3f3f3f;
+    }
+    </style>
 
-            <script>
-                L_NO_TOUCH = false;
-                L_DISABLE_3D = false;
-            </script>
+    <style>#map {
+        position:absolute;
+        top:0;
+        bottom:0;
+        right:0;
+        left:0;
+        }
+    </style>
 
-        
+    <script>
+        L_NO_TOUCH = false;
+        L_DISABLE_3D = false;
+    </script> 
 </head>
 <body>   
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                var map = map_c8d7370c7af138f5d2b539c5578bba11;
-                Object.values(map._layers).forEach(layer => {
-                    if (layer instanceof L.Marker) {
-                        layer.on('dragend', function(e) {
-                            var latlng = e.target.getLatLng();
-                            if (window.updateCoords) {
-                                window.updateCoords(latlng.lat, latlng.lng);
-                            }
-                        });
-                    }
-                });
-            });
-            document.addEventListener('DOMContentLoaded', function() {
-                var map = map_c8d7370c7af138f5d2b539c5578bba11;
-                setTimeout(function() {
-                    map.setZoom(18);
-                }, 500);
-            })
-        </script>
-            <div class="folium-map" id="map_c8d7370c7af138f5d2b539c5578bba11" ></div>
-            <div id="navbar">
-                <table id="tabela-enderecos">
-                <tr>
-                    <th colspan="6">CEP CORREIOS</th>
-                </tr>
-                <tr class="header-cep_correios">
-                    <td>#</td>
-                    <td>Endereço</td>
-                    <td>Bairro</td>
-                    <td>Município</td>
-                    <td>CEP</td>
-                    <td>UF</td>
-                </tr>
-
-                <tr>
-                    <th colspan="6">OPENSTREET</th>
-                </tr>
-                <tr class="header-opem_street">
-                    <td>#</td>
-                    <td>Endereço</td>
-                    <td>Bairro</td>
-                    <td>Município</td>
-                    <td>CEP</td>
-                    <td>UF</td>
-                </tr>
-
-                <tr>
-                    <th colspan="6">DBC LOGRADOURO</th>
-                </tr>
-                <tr class="header-dbc_logradouro">
-                    <td>#</td>
-                    <td>Endereço</td>
-                    <td>Bairro</td>
-                    <td>Município</td>
-                    <td>CEP</td>
-                    <td>UF</td>
-                </tr>
-                <!-- Linhas serão adicionadas aqui via JS -->
-                </table>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var map = map_c8d7370c7af138f5d2b539c5578bba11;
+            setTimeout(function() {
+                map.setZoom(18);
+            }, 500);
+        })
+    </script>
+    <div class="container">
+        <div class="folium-map" id="map_c8d7370c7af138f5d2b539c5578bba11" ></div>
+        <div id="navbar">
+            <div class="input-group mb-4">
+                <input type="text" id="search" placeholder="Pesquise o endereço..." aria-label="Search" aria-describedby="basic-addon1">
+                <button id="btn-mapa">Pesquisar</button>
             </div>
+        <div id="info">
+            <div id="carregando" style="display: none; position: relative;">
+                <p>CARREGANDO API...</p>
+            </div>
+            <table id="tabela-enderecos">
+            <tr>
+                <th colspan="6">CEP CORREIOS</th>
+            </tr>
+            <tr class="header-cep_correios">
+                <td style="width: 5%;">#</td>
+                <td style="width: 45%;">Endereço</td>
+                <td style="width: 25%;">Bairro</td>
+                <td style="width: 25%;">Município</td>
+                <td style="width: 15%;">CEP</td>
+                <td style="width: 10%;">UF</td>
+            </tr>
+
+            <tr>
+                <th colspan="6">OPENSTREET</th>
+            </tr>
+            <tr class="header-opem_street">
+                <td style="width: 5%;">#</td>
+                <td style="width: 45%;">Endereço</td>
+                <td style="width: 25%;">Bairro</td>
+                <td style="width: 25%;">Município</td>
+                <td style="width: 15%;">CEP</td>
+                <td style="width: 10%;">UF</td>
+            </tr>
+
+            <tr>
+                <th colspan="6">DBC LOGRADOURO</th>
+            </tr>
+            <tr class="header-dbc_logradouro">
+                <td style="width: 5%;">#</td>
+                <td style="width: 45%;">Endereço</td>
+                <td style="width: 25%;">Bairro</td>
+                <td style="width: 25%;">Município</td>
+                <td style="width: 15%;">CEP</td>
+                <td style="width: 10%;">UF</td>
+            </tr>
+            <!-- Linhas serão adicionadas aqui via JS -->
+            </table>
+        </div>
+    </div>     
 </body>
 <script>
-    
-    
-            var map_c8d7370c7af138f5d2b539c5578bba11 = L.map(
-                "map_c8d7370c7af138f5d2b539c5578bba11",
-                {
-                    center: [-22.9068, -43.1729],
-                    crs: L.CRS.EPSG3857,
-                    ...{
-  "zoom": 15,
-  "zoomControl": true,
-  "preferCanvas": false,
-}
+    var map_c8d7370c7af138f5d2b539c5578bba11 = L.map(
+        "map_c8d7370c7af138f5d2b539c5578bba11",
+        {
+            center: [-22.9068, -43.1729],
+            crs: L.CRS.EPSG3857,
+            ...{
+        "zoom": 15,
+        "zoomControl": true,
+        "preferCanvas": false,
+        }
 
-                }
-            );
+    });
 
-            
+    var tile_layer_c97fded48daccb23d09f6f784e361bb7 = L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+        "minZoom": 0,
+        "maxZoom": 19,
+        "maxNativeZoom": 19,
+        "noWrap": false,
+        "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+        "subdomains": "abc",
+        "detectRetina": false,
+        "tms": false,
+        "opacity": 1,
+    });
 
-        
+    tile_layer_c97fded48daccb23d09f6f784e361bb7.addTo(map_c8d7370c7af138f5d2b539c5578bba11);
+
+
+    var marker_894e24a1d0c5690a53be31ed1bff273c = L.marker(
+        [-22.9068, -43.1729],
+        {
+        "draggable": true,
+        "autoPan": true,
+        }
+    ).addTo(map_c8d7370c7af138f5d2b539c5578bba11);
+
+
+    var popup_62efbc6cbcf5a9937ffd271561fdad5a = L.popup({
+    "maxWidth": "100%",
+    });
+
+    var html_75bb90c1a2ee8b4f8811cbcf0abfab32 = $(`<div id="html_75bb90c1a2ee8b4f8811cbcf0abfab32" style="width: 100.0%; height: 100.0%;">Arraste para mover</div>`)[0];
+    popup_62efbc6cbcf5a9937ffd271561fdad5a.setContent(html_75bb90c1a2ee8b4f8811cbcf0abfab32);
     
-            var tile_layer_c97fded48daccb23d09f6f784e361bb7 = L.tileLayer(
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {
-  "minZoom": 0,
-  "maxZoom": 19,
-  "maxNativeZoom": 19,
-  "noWrap": false,
-  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
-  "subdomains": "abc",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
-}
-
-            );
-        
-    
-            tile_layer_c97fded48daccb23d09f6f784e361bb7.addTo(map_c8d7370c7af138f5d2b539c5578bba11);
-        
-    
-            var marker_894e24a1d0c5690a53be31ed1bff273c = L.marker(
-                [-22.9068, -43.1729],
-                {
-  "draggable": true,
-  "autoPan": true,
-}
-            ).addTo(map_c8d7370c7af138f5d2b539c5578bba11);
-        
-    
-        var popup_62efbc6cbcf5a9937ffd271561fdad5a = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_75bb90c1a2ee8b4f8811cbcf0abfab32 = $(`<div id="html_75bb90c1a2ee8b4f8811cbcf0abfab32" style="width: 100.0%; height: 100.0%;">Arraste para mover</div>`)[0];
-                popup_62efbc6cbcf5a9937ffd271561fdad5a.setContent(html_75bb90c1a2ee8b4f8811cbcf0abfab32);
-            
-        
-
-        marker_894e24a1d0c5690a53be31ed1bff273c.bindPopup(popup_62efbc6cbcf5a9937ffd271561fdad5a)
-        ;
-
-        
-    
+    marker_894e24a1d0c5690a53be31ed1bff273c.bindPopup(popup_62efbc6cbcf5a9937ffd271561fdad5a); 
 </script>
 <script>
   const linhaSelecionada = [];
@@ -258,37 +279,151 @@
         }
     }
 
-    fetch("http://localhost:5000/enderecos")
-        .then(res => res.json())
-        .then(dados => {
-            const tabela = document.getElementById("tabela-enderecos");
-            const tipos = ["cep_correios", "opem_street", "dbc_logradouro"];
-
-            tipos.forEach(tipo => {
-                const itemEncontrado = dados.find(item => item[tipo]);
-                const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
-                const headerRow = tabela.querySelector(`.header-${tipo}`);
-
-                dadosTipo.forEach(linha => {
-                    const tr = document.createElement("tr");
-
-                    const tdRadio = document.createElement("td");
-                    const radio = criarRadio();
-                    tdRadio.appendChild(radio);
-                    tr.appendChild(tdRadio);
-
-                    linha.forEach(valor => {
-                        const td = document.createElement("td");
-                        td.textContent = valor;
-                        tr.appendChild(td);
-                    });
-
-                    headerRow.insertAdjacentElement("afterend", tr);
-                });
+    //buscar endereço opemstreet
+    async function buscarCoordenadas(endereco) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
+        
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'SeuAppExemplo/1.0 (seu-email@dominio.com)' // recomendação da Nominatim
+                }
             });
-        })
-        .catch((erro) => {
-            console.error("Erro ao buscar dados:", erro);
+
+            const dados = await response.json();
+
+            if (dados.length > 0) {
+                const latitude = parseFloat(dados[0].lat);
+                const longitude = parseFloat(dados[0].lon);
+                return { latitude, longitude };
+            } else {
+                console.warn("Endereço não encontrado.");
+                return null;
+            }
+
+        } catch (error) {
+            console.error("Erro ao buscar coordenadas:", error);
+            return null;
+        }
+    }
+
+    // Quando quiser forçar uma nova posição
+    const endereco = "Rua Santo Antonio de padua, duque de caxias, RJ"; // Exemplo de endereço
+    buscarCoordenadas(endereco).then(coords => {
+        if (coords) {
+            console.log(`Coordenadas encontradas: ${coords.latitude}, ${coords.longitude}`);
+            atualizarMarcador(coords.latitude, coords.longitude);
+            inserir_info_dados(coords.latitude, coords.longitude); // já atualiza também na API
+        }
+    });
+
+    // Exemplo: forçar marcador para uma nova posição
+    function atualizarMarcador(lat, lng) {
+        var map = map_c8d7370c7af138f5d2b539c5578bba11;
+        Object.values(map._layers).forEach(layer => {
+            if (layer instanceof L.Marker) {
+                layer.setLatLng([lat, lng]); // move o marcador
+                map.setView([lat, lng], map.getZoom()); // centraliza o mapa (opcional)
+            }
+        });
+    }
+
+    function inserir_info_dados(lat, long){
+        //display carregando api
+        document.getElementById("carregando").style.display = "block";
+        document.getElementById("tabela-enderecos").style.display = "none";
+
+        //consumir api
+        fetch("http://localhost:5000/enderecos", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                lat: lat,
+                lon: long
+            })
+            })
+            .then(res => res.json())
+            .then(dados => {
+            console.log(dados);
+            carregar_info_dados();
+            });
+    }
+
+    function carregar_info_dados(){
+        //display carregando api
+        document.getElementById("carregando").style.display = "block";
+        document.getElementById("tabela-enderecos").style.display = "none";
+
+        //consumir api 
+        fetch("http://localhost:5000/enderecos")
+            .then(res => res.json())
+            .then(dados => {
+                const tabela = document.getElementById("tabela-enderecos");
+
+                // Limpa as linhas existentes, exceto os cabeçalhos
+                const linhasExistentes = tabela.querySelectorAll("tr");
+                linhasExistentes.forEach(linha => {
+                    const isCabecalho = linha.classList.contains("header-cep_correios") ||
+                                        linha.classList.contains("header-opem_street") ||
+                                        linha.classList.contains("header-dbc_logradouro") ||
+                                        linha.querySelector("th");
+
+                    if (!isCabecalho) {
+                        linha.remove();
+                    }
+                });
+
+                const tipos = ["cep_correios", "opem_street", "dbc_logradouro"];
+
+                tipos.forEach(tipo => {
+                    const itemEncontrado = dados.find(item => item[tipo]);
+                    const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
+                    const headerRow = tabela.querySelector(`.header-${tipo}`);
+
+                    dadosTipo.forEach(linha => {
+                        const tr = document.createElement("tr");
+
+                        const tdRadio = document.createElement("td");
+                        const radio = criarRadio();
+                        tdRadio.appendChild(radio);
+                        tr.appendChild(tdRadio);
+
+                        linha.forEach(valor => {
+                            const td = document.createElement("td");  
+                            td.textContent = valor || "--"; // Verifica se o valor é undefined ou null
+                            tr.appendChild(td);
+                        });
+
+                        headerRow.insertAdjacentElement("afterend", tr);
+                    });
+                });
+            })
+            .catch((erro) => {
+                console.error("Erro ao buscar dados:", erro);
+            })
+            .finally(() => {
+                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
+                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
+            });
+        }{carregar_info_dados()}
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var map = map_c8d7370c7af138f5d2b539c5578bba11;
+            Object.values(map._layers).forEach(layer => {
+                if (layer instanceof L.Marker) {
+                    layer.on('dragend', function(e) {
+                        // Atualiza as coordenadas ao arrastar o marcador
+                        var latlng = e.target.getLatLng();
+                        inserir_info_dados(latlng.lat, latlng.lng);
+                        /*if (window.updateCoords) {
+                            window.updateCoords(latlng.lat, latlng.lng);
+                            carregar_info_dados();
+                        }*/
+                    });
+                }
+            });
         });
 </script>
 </html>

@@ -38,7 +38,7 @@ class MapaCEF:
         
         cef.Shutdown()
 
-    def criar_mapa(self, lat, lon, callback_coords=None, callback_info=None):
+    def criar_mapa(self, lat, lon, callback_info=None):
         # Criar o mapa HTML
         mapa = folium.Map(location=[lat, lon], zoom_start=15)
         folium.Marker(
@@ -176,7 +176,6 @@ class MapaCEF:
             )
 
             bindings = cef.JavascriptBindings()
-            bindings.SetFunction("updateCoords", callback_coords)
             bindings.SetFunction("updateInfo", callback_info)
             self.browser.SetJavascriptBindings(bindings)
 
