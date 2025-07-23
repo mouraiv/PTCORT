@@ -93,38 +93,40 @@ def buscar_endereco_por_coordenadas(api, lat, lon, cep_aberto_token):
     else:
         cep = None
     
-    dados_geocorp = consultar_cep("http://geocorp3.telemar:85/CEP.asp",cep)
+    dados_geocorp = consultar_cep("http://geocorp3.telemar:85/CEP.asp", cep)
 
-    #Criar resultado unificado
+    # Criar resultado unificado
     resultado_unificado = []
 
     # 1. Dados GeoCorp (Correios + DBC_LOGRADOUROS)
     if dados_geocorp:
         # a) Correios
         if "CORREIOS" in dados_geocorp:
-            dados = dados_geocorp["CORREIOS"]
-            resultado_unificado.append({
-                "cep_correios": [[
+            lista_correios = []
+            for dados in dados_geocorp["CORREIOS"]:
+                lista_correios.append([
                     f"{dados.get('TIPO', '')} {dados.get('LOGRADOURO', '')}".strip(),
                     dados.get("BAIRRO", ""),
                     dados.get("LOCALIDADE", ""),
                     dados.get("CEP", ""),
                     dados.get("UF", "")
-                ]]
-            })
+                ])
+            if lista_correios:
+                resultado_unificado.append({"cep_correios": lista_correios})
 
-        # b) DBC LOGRADOURO
+        # b) DBC LOGRADOUROS
         if "BDC_LOGRADOUROS" in dados_geocorp:
-            dados = dados_geocorp["BDC_LOGRADOUROS"]
-            resultado_unificado.append({
-                "dbc_logradouro": [[
+            lista_dbc = []
+            for dados in dados_geocorp["BDC_LOGRADOUROS"]:
+                lista_dbc.append([
                     f"{dados.get('TIPO', '')} {dados.get('LOGRADOURO', '')}".strip(),
                     dados.get("BAIRRO", ""),
                     dados.get("LOCALIDADE", ""),
                     dados.get("CEP", ""),
                     dados.get("UF", "")
-                ]]
-            })
+                ])
+            if lista_dbc:
+                resultado_unificado.append({"dbc_logradouro": lista_dbc})
     else:
         print("⚠️ Nenhum dado retornado pelo GeoCorp.")
 

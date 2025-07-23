@@ -31,13 +31,14 @@ def consultar_cep(api, cep):
         soup = BeautifulSoup(response.text, 'html.parser')
         resultado = {}
 
-        # Processar tabela BDC LOGRADOUROS
+        # === BDC_LOGRADOUROS ===
         bdc_header = soup.find('td', bgcolor="#8175A7")
         if bdc_header:
+            resultado['BDC_LOGRADOUROS'] = []
             for row in bdc_header.find_parent('table').find_all('tr'):
                 cells = row.find_all('td')
                 if len(cells) >= 9 and cep in row.get_text():
-                    resultado['BDC_LOGRADOUROS'] = {
+                    resultado['BDC_LOGRADOUROS'].append({
                         'UF': cells[0].get_text(strip=True),
                         'LOCALIDADE': cells[1].get_text(strip=True),
                         'TIPO': cells[2].get_text(strip=True),
@@ -47,16 +48,22 @@ def consultar_cep(api, cep):
                         'CEP': cells[6].get_text(strip=True).replace('-', '').strip(),
                         'COD_LOCALIDADE': cells[7].get_text(strip=True),
                         'COD_LOGRADOURO': cells[8].get_text(strip=True)
-                    }
-                    break
+                    })
 
-        # Processar tabela CORREIOS
+        # === CORREIOS ===
         correios_header = soup.find('td', bgcolor="#009AA2")
         if correios_header:
-            for row in correios_header.find_parent('table').find_all('tr'):
+            resultado['CORREIOS'] = []
+            tr_inicio = correios_header.find_parent('tr')
+            trs = tr_inicio.find_next_siblings('tr')
+
+            for row in trs:
                 cells = row.find_all('td')
+                # Encerra se encontrar nova seção ou linha fora do padrão
+                if not cells or (cells[0].has_attr('bgcolor') and cells[0]['bgcolor'] != "#009AA2"):
+                    break
                 if len(cells) >= 8 and cep in row.get_text():
-                    resultado['CORREIOS'] = {
+                    resultado['CORREIOS'].append({
                         'UF': cells[0].get_text(strip=True),
                         'LOCALIDADE': cells[1].get_text(strip=True),
                         'TIPO': cells[2].get_text(strip=True),
@@ -65,8 +72,7 @@ def consultar_cep(api, cep):
                         'BAIRRO': cells[5].get_text(strip=True),
                         'CEP': cells[6].get_text(strip=True).replace('-', '').strip(),
                         'COMPLEMENTO': cells[7].get_text(strip=True)
-                    }
-                    break
+                    })
 
         return resultado if resultado else None
 
