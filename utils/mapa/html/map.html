@@ -56,7 +56,7 @@
     th, td {
         padding: 8px;
         text-align: left;
-        border-bottom: 1px solid #ddd;
+        border-bottom: 1px solid #c7c5c5;
     }
     th {
         background-color: #3f3f3f;
@@ -77,22 +77,14 @@
         cursor: pointer;
     }
     input[type="text"] {
-        width: 82%;
+        width: 100%;
         padding: 8px;
         margin-bottom: 0;
         border: 1px solid #ccc;
     }
-    button {
-        padding: 8px;
-        width: 18%;
-        background-color: #3f3f3f;
-        color: white;
-        border: none;
-        cursor: pointer;
-    }
-    button:active {
-        background-color: #a5a5a5;
-        color: #000;
+    input[type="text"]:focus {
+        border-color: #3f3f3f;
+        outline: none;
     }
     #info{
         height: 90%;
@@ -140,8 +132,8 @@
         <div class="folium-map" id="map_c8d7370c7af138f5d2b539c5578bba11" ></div>
         <div id="navbar">
             <div class="input-group mb-4">
-                <input type="text" id="search" placeholder="Pesquise o endereço..." aria-label="Search" aria-describedby="basic-addon1">
-                <button id="btn-mapa">Pesquisar</button>
+                <input type="text" id="endereco" placeholder="Digite um endereço" autocomplete="off" />
+                <div id="sugestoes" style="border: 1px solid #ccc; display: none; position: absolute; background: white; z-index: 1000; margin-top: 4rem; width: 100%;"></div>
             </div>
         <div id="info">
             <div id="carregando" style="display: none; position: relative;">
@@ -240,6 +232,14 @@
 <script>
   const linhaSelecionada = [];
 
+    //zoom map in
+    function zoomIn() {
+        var map = map_c8d7370c7af138f5d2b539c5578bba11;
+        setTimeout(function() {
+            map.setZoom(18);
+        }, 500);
+    }
+
     function criarRadio() {
         const radio = document.createElement("input");
         radio.type = "radio";
@@ -279,6 +279,118 @@
         }
     }
 
+    let timeout = null;
+
+    document.getElementById("endereco").addEventListener("input", function () {
+        const termo = this.value.trim();
+
+        clearTimeout(timeout); // evita chamadas em excesso
+        if (termo.length < 3) {
+            document.getElementById("sugestoes").style.display = "none";
+            return;
+        }
+
+        timeout = setTimeout(() => {
+            buscarSugestoesEndereco(termo);
+        }, 400); // debounce
+    });
+
+    async function buscarSugestoesEndereco(termo) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(termo)}&addressdetails=1&limit=5`;
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    "User-Agent": "SeuApp/1.0 (seu-email@exemplo.com)"
+                }
+            });
+
+            const resultados = await response.json();
+
+            const map_resultados = resultados.map(item => {
+                lat = item.lat;
+                lon = item.lon;
+                const {
+                    road,
+                    city,
+                    state,
+                    suburb,
+                    region,
+                    country
+                } = item.address;
+
+                return {
+                    road,
+                    city,
+                    state,
+                    suburb,
+                    region,
+                    country,
+                    lat,
+                    lon
+                };
+            });
+
+            exibirSugestoes(map_resultados);
+        } catch (erro) {
+            console.error("Erro ao buscar sugestões:", erro);
+        }
+    }
+
+    function exibirSugestoes(resultados) {
+        const container = document.getElementById("sugestoes");
+        container.innerHTML = "";
+
+        if (!resultados || resultados.length === 0) {
+            container.style.display = "none";
+            return;
+        }
+
+        resultados.forEach(item => {
+            // Montar display_name manualmente com os campos disponíveis
+            const partes = [
+                item.road,
+                item.suburb,
+                item.city,
+                item.state,
+                item.region,
+                item.country
+            ].filter(Boolean); // Remove valores undefined ou null
+
+            const display_name = partes.join(", ");
+
+            const div = document.createElement("div");
+            div.textContent = display_name;
+            div.style.padding = "6px";
+            div.style.borderBottom = "1px solid #c7c5c5";
+            div.style.cursor = "pointer";
+
+            div.classList.add("sugestao-hover");
+
+            div.addEventListener("mouseover", () => {
+                div.style.color = "black";
+            });
+            div.addEventListener("mouseout", () => {
+                div.style.color = "#3f3f3f";
+            });
+
+            div.addEventListener("click", () => {
+                document.getElementById("endereco").value = display_name;
+                container.style.display = "none";
+
+                // Apenas se item.lat e item.lon existirem
+                if (item.lat && item.lon) {
+                    atualizarMarcador(parseFloat(item.lat), parseFloat(item.lon));
+                    inserir_info_dados(parseFloat(item.lat), parseFloat(item.lon));
+                }
+            });
+
+            container.appendChild(div);
+        });
+
+        container.style.display = "block";
+    }
+
     //buscar endereço opemstreet
     async function buscarCoordenadas(endereco) {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
@@ -308,7 +420,6 @@
     }
 
     // Quando quiser forçar uma nova posição
-    const endereco = "Rua Santo Antonio de padua, duque de caxias, RJ"; // Exemplo de endereço
     buscarCoordenadas(endereco).then(coords => {
         if (coords) {
             console.log(`Coordenadas encontradas: ${coords.latitude}, ${coords.longitude}`);
@@ -326,6 +437,7 @@
                 map.setView([lat, lng], map.getZoom()); // centraliza o mapa (opcional)
             }
         });
+        zoomIn()
     }
 
     function inserir_info_dados(lat, long){
@@ -346,8 +458,16 @@
             })
             .then(res => res.json())
             .then(dados => {
-            console.log(dados);
-            carregar_info_dados();
+                carregar_info_dados();
+            })
+            .catch((erro) => {
+                console.error("Erro ao buscar dados:", erro);
+                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
+                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
+            })
+            .finally(() => {
+                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
+                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
             });
     }
 
@@ -382,26 +502,40 @@
                     const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
                     const headerRow = tabela.querySelector(`.header-${tipo}`);
 
-                    dadosTipo.forEach(linha => {
+                     console.log(dadosTipo.length);
+                    if (dadosTipo.length === 0) {
                         const tr = document.createElement("tr");
-
-                        const tdRadio = document.createElement("td");
-                        const radio = criarRadio();
-                        tdRadio.appendChild(radio);
-                        tr.appendChild(tdRadio);
-
-                        linha.forEach(valor => {
-                            const td = document.createElement("td");  
-                            td.textContent = valor || "--"; // Verifica se o valor é undefined ou null
-                            tr.appendChild(td);
-                        });
-
+                        // Se a linha estiver vazia, adiciona uma linha com "--"
+                        const tdVazio = document.createElement("td");
+                        tdVazio.colSpan = 6; // Colspan para ocupar todas as colunas
+                        tdVazio.textContent = "Nenhum resultado encontrado";
+                        tr.appendChild(tdVazio);
                         headerRow.insertAdjacentElement("afterend", tr);
-                    });
+                        return; // Pula para a próxima iteração
+                    }else{
+                        dadosTipo.forEach(linha => {
+                            const tr = document.createElement("tr");
+
+                            const tdRadio = document.createElement("td");
+                            const radio = criarRadio();
+                            tdRadio.appendChild(radio);
+                            tr.appendChild(tdRadio);
+    
+                            linha.forEach(valor => {
+                                const td = document.createElement("td");
+                                td.textContent = valor || "--"; // Verifica se o valor é undefined ou null
+                                tr.appendChild(td);
+                            });
+
+                            headerRow.insertAdjacentElement("afterend", tr);
+                        });
+                    }
                 });
             })
             .catch((erro) => {
                 console.error("Erro ao buscar dados:", erro);
+                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
+                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
             })
             .finally(() => {
                 document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
