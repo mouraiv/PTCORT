@@ -133,7 +133,7 @@
         <div class="folium-map" id="map_c8d7370c7af138f5d2b539c5578bba11" ></div>
         <div id="navbar">
             <div class="input-group mb-4">
-                <input type="text" id="endereco" placeholder="Digite um endereço" autocomplete="off" />
+                <input type="text" id="endereco" placeholder="Ex.: logradouro, bairro, municipio, estado" autocomplete="off" />
                 <div id="sugestoes" style="border: 1px solid #ccc; display: none; position: absolute; background: white; z-index: 1000; margin-top: 4rem; width: 100%;"></div>
             </div>
         <div id="info">
@@ -274,7 +274,6 @@
             linhaSelecionada.push(tds[i].textContent.trim());
         }
 
-        console.log("Linha selecionada:", linhaSelecionada);
         if (window.updateInfo) {
                 window.updateInfo(linhaSelecionada);
         }
@@ -311,6 +310,7 @@
             const map_resultados = resultados.map(item => {
                 lat = item.lat;
                 lon = item.lon;
+
                 const {
                     road,
                     city,
@@ -423,7 +423,6 @@
     // Quando quiser forçar uma nova posição
     buscarCoordenadas(endereco).then(coords => {
         if (coords) {
-            console.log(`Coordenadas encontradas: ${coords.latitude}, ${coords.longitude}`);
             atualizarMarcador(coords.latitude, coords.longitude);
             inserir_info_dados(coords.latitude, coords.longitude); // já atualiza também na API
         }
@@ -503,7 +502,6 @@
                     const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
                     const headerRow = tabela.querySelector(`.header-${tipo}`);
 
-                     console.log(dadosTipo.length);
                     if (dadosTipo.length === 0) {
                         const tr = document.createElement("tr");
                         // Se a linha estiver vazia, adiciona uma linha com "--"
