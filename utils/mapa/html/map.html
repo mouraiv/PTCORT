@@ -306,12 +306,14 @@
             });
 
             const resultados = await response.json();
+            console.log(resultados);
 
             const map_resultados = resultados.map(item => {
                 lat = item.lat;
                 lon = item.lon;
 
                 const {
+                    house_number,
                     road,
                     city,
                     state,
@@ -321,6 +323,7 @@
                 } = item.address;
 
                 return {
+                    house_number,
                     road,
                     city,
                     state,
@@ -350,13 +353,15 @@
         resultados.forEach(item => {
             // Montar display_name manualmente com os campos disponíveis
             const partes = [
-                item.road,
+                item.house_number && item.road ? `${item.road} ${item.house_number}` : item.road,
                 item.suburb,
                 item.city,
                 item.state,
                 item.region,
                 item.country
             ].filter(Boolean); // Remove valores undefined ou null
+
+            //console.log(partes);
 
             const display_name = partes.join(", ");
 
