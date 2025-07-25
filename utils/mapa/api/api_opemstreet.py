@@ -30,53 +30,86 @@ def buscar_endereco_por_coordenadas(api, lat, lon, cep_aberto_token):
     # 2. Tratamento do estado para obter a sigla UF via db_instance
     estado = endereco.get('state')
 
-    def obter_uf(estado: str) -> str:
-        estados_para_uf = {
-            'Acre': 'AC',
-            'Alagoas': 'AL',
-            'Amapá': 'AP',
-            'Amazonas': 'AM',
-            'Bahia': 'BA',
-            'Ceará': 'CE',
-            'Distrito Federal': 'DF',
-            'Espírito Santo': 'ES',
-            'Goiás': 'GO',
-            'Maranhão': 'MA',
-            'Mato Grosso': 'MT',
-            'Mato Grosso do Sul': 'MS',
-            'Minas Gerais': 'MG',
-            'Pará': 'PA',
-            'Paraíba': 'PB',
-            'Paraná': 'PR',
-            'Pernambuco': 'PE',
-            'Piauí': 'PI',
-            'Rio de Janeiro': 'RJ',
-            'Rio Grande do Norte': 'RN',
-            'Rio Grande do Sul': 'RS',
-            'Rondônia': 'RO',
-            'Roraima': 'RR',
-            'Santa Catarina': 'SC',
-            'São Paulo': 'SP',
-            'Sergipe': 'SE',
-            'Tocantins': 'TO'
-        }
-
-        # Remove espaços extras
-        estado_formatado = estado.strip()
+    def obter_uf(estado: str, pais: str = None) -> str:
+        """Converte o nome completo do estado para sigla UF, tratando casos internacionais
         
-        # Procura pelo estado no dicionário (comparação case insensitive)
-        for nome_estado, uf in estados_para_uf.items():
-            if nome_estado.casefold() == estado_formatado.casefold():
-                return uf
+        Args:
+            estado: Nome do estado/província
+            pais: Nome do país (opcional)
+            
+        Returns:
+            str: Sigla UF ou "--" para países não-Brasil ou dados inválidos
+        """
+        # Primeiro verifica se é um país não-Brasil
+        if pais and pais.lower() != 'brasil' and pais.lower() != 'brazil':
+            return "--"
         
-        return None  # Retorna None se não encontrar
+        # Verifica estado vazio/nulo
+        if not estado:
+            return "--"
+        
+        try:
+            # Dicionário completo com todas as variações de nomes
+            estados_para_uf = {
+                'acre': 'AC',
+                'alagoas': 'AL',
+                'amapá': 'AP', 'amapa': 'AP',
+                'amazonas': 'AM',
+                'bahia': 'BA',
+                'ceará': 'CE', 'ceara': 'CE',
+                'distrito federal': 'DF',
+                'espírito santo': 'ES', 'espirito santo': 'ES',
+                'goiás': 'GO', 'goias': 'GO',
+                'maranhão': 'MA', 'maranhao': 'MA',
+                'mato grosso': 'MT',
+                'mato grosso do sul': 'MS',
+                'minas gerais': 'MG',
+                'pará': 'PA', 'para': 'PA',
+                'paraíba': 'PB', 'paraiba': 'PB',
+                'paraná': 'PR', 'parana': 'PR',
+                'pernambuco': 'PE',
+                'piauí': 'PI', 'piaui': 'PI',
+                'rio de janeiro': 'RJ',
+                'rio grande do norte': 'RN',
+                'rio grande do sul': 'RS',
+                'rondônia': 'RO', 'rondonia': 'RO',
+                'roraima': 'RR',
+                'santa catarina': 'SC',
+                'são paulo': 'SP', 'sao paulo': 'SP',
+                'sergipe': 'SE',
+                'tocantins': 'TO'
+            }
+            
+            # Normaliza o estado: remove espaços, acentos e coloca em minúsculas
+            estado_formatado = estado.strip().lower()
+            
+            # Remove acentos (opcional, para maior robustez)
+            estado_formatado = (estado_formatado
+                            .replace('á', 'a').replace('â', 'a').replace('ã', 'a')
+                            .replace('é', 'e').replace('ê', 'e')
+                            .replace('í', 'i')
+                            .replace('ó', 'o').replace('ô', 'o').replace('õ', 'o')
+                            .replace('ú', 'u')
+                            .replace('ç', 'c'))
+            
+            return estados_para_uf.get(estado_formatado, "--")
+        
+        except AttributeError:
+            return "--"
 
     # 3. Preparar parâmetros para busca no Cep Aberto
     # Só envia cidade e bairro se existirem (pois são obrigatórios na API, mas a cidade pode estar em outras chaves)
     cidade = endereco.get('city') or endereco.get('town') or endereco.get('village')
     bairro = endereco.get('suburb') or endereco.get('neighbourhood')
     logradouro = endereco.get('road') or endereco.get('residential') or endereco.get('pedestrian')
-    cep_opemstreet = endereco.get('postcode').replace("-", "")
+    cep_opemstreet = endereco.get('postcode', '')
+
+    #Trata retorno CEP
+    if cep_opemstreet:
+            cep_opemstreet = cep_opemstreet.replace("-", "")
+    else:
+        cep_opemstreet = "--"
+
     # Recuperar UF do estado
     uf = obter_uf(estado)
 
@@ -119,7 +152,9 @@ def buscar_endereco_por_coordenadas(api, lat, lon, cep_aberto_token):
                         dados.get("BAIRRO", ""),
                         dados.get("LOCALIDADE", ""),
                         dados.get("CEP", ""),
-                        dados.get("UF", "")
+                        dados.get("UF", ""),
+                        lat,
+                        lon                      
                     ])
                 if lista_correios:
                      _resultado.append({"cep_correios": lista_correios})
@@ -133,7 +168,9 @@ def buscar_endereco_por_coordenadas(api, lat, lon, cep_aberto_token):
                         dados.get("BAIRRO", ""),
                         dados.get("LOCALIDADE", ""),
                         dados.get("CEP", ""),
-                        dados.get("UF", "")
+                        dados.get("UF", ""),
+                        lat,
+                        lon 
                     ])
                 if lista_dbc:
                      _resultado.append({"dbc_logradouro": lista_dbc})
@@ -201,7 +238,9 @@ def buscar_endereco_por_coordenadas(api, lat, lon, cep_aberto_token):
             "bairro": bairro or "",
             "municipio": cidade or "",
             "cep": cep_valido or "",
-            "uf": uf or ""
+            "uf": uf or "",
+            "latitude": lat,
+            "longitude": lon
         }
 
         resultado_unificado.append({
@@ -210,7 +249,9 @@ def buscar_endereco_por_coordenadas(api, lat, lon, cep_aberto_token):
                 dados_osm.get("bairro", ""),
                 dados_osm.get("municipio", ""),
                 dados_osm.get("cep", ""),
-                dados_osm.get("uf", "")
+                dados_osm.get("uf", ""),
+                dados_osm.get("latitude", ""),
+                dados_osm.get("longitude", "")
             ]]
         })
     except Exception as e:

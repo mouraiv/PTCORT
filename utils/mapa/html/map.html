@@ -231,6 +231,48 @@
     marker_894e24a1d0c5690a53be31ed1bff273c.bindPopup(popup_62efbc6cbcf5a9937ffd271561fdad5a); 
 </script>
 <script>
+    class CEFCommunicator {
+        constructor() {
+            this.lastUpdate = 0;
+            this.checkInterval = 500;
+        }
+
+        async checkForUpdates() {
+            try {
+                const response = await fetch(`http://localhost:5000/update-data?last_update=${this.lastUpdate}`);
+                const data = await response.json();
+                
+                if (data.timestamp > this.lastUpdate) {
+                    this.lastUpdate = data.timestamp;
+                    this.processData(data.dados);
+                }
+            } catch (error) {
+                console.error("Update check failed:", error);
+            } finally {
+                setTimeout(() => this.checkForUpdates(), this.checkInterval);
+            }
+        }
+
+        processData(data) {
+            // Atualize sua interface aqui
+            carregar_info_dados()
+            loading_mapa(true)
+            console.log("Novos dados recebidos:", data);
+
+            timeout = setTimeout(() => {
+                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
+                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
+            }, 500)
+        }
+    }
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', () => {
+        const comm = new CEFCommunicator();
+        comm.checkForUpdates();
+    });
+</script>
+<script>
   const linhaSelecionada = [];
 
     //zoom map in
@@ -241,7 +283,7 @@
         }, 500);
     }
 
-    function criarRadio() {
+    function criarRadio(lat, lon) {
         const radio = document.createElement("input");
         radio.type = "radio";
         radio.name = "grupo-radio";
@@ -258,14 +300,14 @@
                 });
 
                 this.dataset.checked = "true";
-                coletarLinhaSelecionada(this);
+                coletarLinhaSelecionada(this, lat, lon);
             }
         });
 
         return radio;
     }
 
-    function coletarLinhaSelecionada(radio) {
+    function coletarLinhaSelecionada(radio, lat, lon) {
         const tr = radio.closest("tr");
         const tds = tr.querySelectorAll("td");
 
@@ -273,7 +315,8 @@
         for (let i = 1; i < tds.length; i++) {
             linhaSelecionada.push(tds[i].textContent.trim());
         }
-
+        linhaSelecionada.push(lat, lon); // Adiciona latitude e longitude ao final
+        console.log(linhaSelecionada);
         if (window.updateInfo) {
                 window.updateInfo(linhaSelecionada);
         }
@@ -295,8 +338,27 @@
         }, 400); // debounce
     });
 
+    function extrairNumeroDigitado(termo, road = "") {
+        // 1) procura padrões explícitos: nº, numero, num, # ...
+        const explicito = termo.match(/(?:n(?:úm(?:ero)?)?|nº|num\.?|#)\s*(\d+)/i);
+        if (explicito) return explicito[1];
+
+        // 2) pega o ÚLTIMO número digitado (se houver)
+        const numeros = termo.match(/\d+/g);
+        if (!numeros || numeros.length === 0) return "";
+
+        const ultimoNumero = numeros[numeros.length - 1];
+
+        // 3) se o número aparece no nome da rua (ex.: "Rua 21"), considere que é parte do logradouro
+        const roadHasNumber = road
+            ? new RegExp(`\\b${ultimoNumero}\\b`).test(road)
+            : false;
+
+        return roadHasNumber ? "" : ultimoNumero;
+    }
+
     async function buscarSugestoesEndereco(termo) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(termo)}&addressdetails=1&limit=5`;
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(termo) + '&addressdetails=1&limit=5';
 
         try {
             const response = await fetch(url, {
@@ -306,32 +368,39 @@
             });
 
             const resultados = await response.json();
-            console.log(resultados);
 
-            const map_resultados = resultados.map(item => {
-                lat = item.lat;
-                lon = item.lon;
+            const map_resultados = resultados.map(function(item) {
+                // Handle potentially undefined address
+                var address = item.address || {};
+                var house_number = address.house_number;
+                var road = address.road;
+                var suburb = address.suburb;
+                var city = address.city;
+                var state = address.state;
+                var country = address.country;
 
-                const {
-                    house_number,
-                    road,
-                    city,
-                    state,
-                    suburb,
-                    region,
-                    country
-                } = item.address;
+                // Se Nominatim não trouxe número, tentamos extrair do termo
+                var numeroDigitado = !house_number
+                    ? extrairNumeroDigitado(termo, road)
+                    : "";
+
+                var numero = house_number || numeroDigitado || "";
+
+                var enderecoParts = [];
+                if (road) enderecoParts.push(road);
+                if (numero) enderecoParts.push(numero);
+                if (suburb) enderecoParts.push(suburb);
+                if (city) enderecoParts.push(city);
+                if (state) enderecoParts.push(state);
+                if (country) enderecoParts.push(country);
+
+                var enderecoCompleto = enderecoParts.join(", ");
 
                 return {
-                    house_number,
-                    road,
-                    city,
-                    state,
-                    suburb,
-                    region,
-                    country,
-                    lat,
-                    lon
+                    display_name: enderecoCompleto,
+                    lat: item.lat,
+                    lon: item.lon,
+                    raw: item
                 };
             });
 
@@ -341,58 +410,106 @@
         }
     }
 
+    // Helper function for older JavaScript compatibility
+    if (typeof Object.assign != 'function') {
+        Object.assign = function(target) {
+            'use strict';
+            if (target == null) {
+                throw new TypeError('Cannot convert undefined or null to object');
+            }
+
+            target = Object(target);
+            for (var index = 1; index < arguments.length; index++) {
+                var source = arguments[index];
+                if (source != null) {
+                    for (var key in source) {
+                        if (Object.prototype.hasOwnProperty.call(source, key)) {
+                            target[key] = source[key];
+                        }
+                    }
+                }
+            }
+            return target;
+        };
+    }
+
     function exibirSugestoes(resultados) {
-        const container = document.getElementById("sugestoes");
+        var container = document.getElementById("sugestoes");
         container.innerHTML = "";
 
-        if (!resultados || resultados.length === 0) {
+        if (!Array.isArray(resultados) || resultados.length === 0) {
             container.style.display = "none";
             return;
         }
 
-        resultados.forEach(item => {
-            // Montar display_name manualmente com os campos disponíveis
-            const partes = [
-                item.house_number && item.road ? `${item.road} ${item.house_number}` : item.road,
-                item.suburb,
-                item.city,
-                item.state,
-                item.region,
-                item.country
-            ].filter(Boolean); // Remove valores undefined ou null
+        function buildDisplayName(r) {
+            // 1) Se já veio pronto do map_resultados
+            if (r.display_name) return r.display_name;
 
-            //console.log(partes);
+            // 2) Tenta reconstruir (caso você ainda envie o "raw" do Nominatim)
+            var addr = r.address || (r.raw && r.raw.address) || {};
+            var house_number = addr.house_number;
+            var road = addr.road;
+            var suburb = addr.suburb;
+            var city = addr.city;
+            var town = addr.town;
+            var village = addr.village;
+            var state = addr.state;
+            var region = addr.region;
+            var country = addr.country;
 
-            const display_name = partes.join(", ");
+            var _city = city || town || village || "";
+            var _state = state || region || "";
 
-            const div = document.createElement("div");
+            var partes = [];
+            
+            if (road) {
+                partes.push(house_number ? road + " " + house_number : road);
+            }
+            if (suburb) partes.push(suburb);
+            if (_city) partes.push(_city);
+            if (_state) partes.push(_state);
+            if (country) partes.push(country);
+
+            return partes.join(", ");
+        }
+
+        for (var i = 0; i < resultados.length; i++) {
+            var r = resultados[i];
+            var display_name = buildDisplayName(r);
+
+            // Tenta garantir números (substituindo ?? e ?. por verificações tradicionais)
+            var lat = Number(r.lat !== undefined ? r.lat : (r.raw && r.raw.lat));
+            var lon = Number(r.lon !== undefined ? r.lon : (r.raw && r.raw.lon));
+
+            var div = document.createElement("div");
             div.textContent = display_name;
             div.style.padding = "6px";
             div.style.borderBottom = "1px solid #c7c5c5";
             div.style.cursor = "pointer";
+            div.className += " sugestao-hover";
 
-            div.classList.add("sugestao-hover");
-
-            div.addEventListener("mouseover", () => {
-                div.style.color = "black";
+            div.addEventListener("mouseover", function() {
+                this.style.color = "black";
             });
-            div.addEventListener("mouseout", () => {
-                div.style.color = "#3f3f3f";
+            div.addEventListener("mouseout", function() {
+                this.style.color = "#3f3f3f";
             });
 
-            div.addEventListener("click", () => {
-                document.getElementById("endereco").value = display_name;
-                container.style.display = "none";
+            div.addEventListener("click", (function(lat, lon, display_name) {
+                return function() {
+                    document.getElementById("endereco").value = display_name;
+                    container.style.display = "none";
 
-                // Apenas se item.lat e item.lon existirem
-                if (item.lat && item.lon) {
-                    atualizarMarcador(parseFloat(item.lat), parseFloat(item.lon));
-                    inserir_info_dados(parseFloat(item.lat), parseFloat(item.lon));
-                }
-            });
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        atualizarMarcador(lat, lon);
+                        inserir_info_dados(lat, lon);
+                    }
+                };
+            })(lat, lon, display_name));
 
             container.appendChild(div);
-        });
+        }
 
         container.style.display = "block";
     }
@@ -446,10 +563,10 @@
     }
 
     function inserir_info_dados(lat, long){
-        //display carregando api
+        // Display carregando api
         document.getElementById("carregando").style.display = "block";
         document.getElementById("tabela-enderecos").style.display = "none";
-
+        
         //consumir api
         fetch("http://localhost:5000/enderecos", {
             method: "POST",
@@ -463,25 +580,18 @@
             })
             .then(res => res.json())
             .then(dados => {
-                carregar_info_dados();
             })
             .catch((erro) => {
                 console.error("Erro ao buscar dados:", erro);
-                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
-                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
             })
-            .finally(() => {
-                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
-                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
-            });
     }
 
-    function carregar_info_dados(){
-        //display carregando api
+    function carregar_info_dados() {
+        // Display carregando api
         document.getElementById("carregando").style.display = "block";
         document.getElementById("tabela-enderecos").style.display = "none";
 
-        //consumir api 
+        // Consumir api 
         fetch("http://localhost:5000/enderecos")
             .then(res => res.json())
             .then(dados => {
@@ -500,6 +610,24 @@
                     }
                 });
 
+                // Verifica se existem dados e atualiza marcador
+                if (Array.isArray(dados) && dados.length > 0) {
+                    // Encontra o primeiro item com opem_street válido
+                    const itemComCoordenadas = dados.find(item => 
+                        item.opem_street && 
+                        item.opem_street[0] && 
+                        item.opem_street[0][5] && 
+                        item.opem_street[0][6]
+                    );
+
+                    if (itemComCoordenadas) {
+                        const latitude = itemComCoordenadas.opem_street[0][5];
+                        const longitude = itemComCoordenadas.opem_street[0][6];
+                        console.log("Atualizando marcador para:", latitude, longitude);
+                        atualizarMarcador(latitude, longitude);
+                    }
+                }
+
                 const tipos = ["cep_correios", "opem_street", "dbc_logradouro"];
 
                 tipos.forEach(tipo => {
@@ -507,61 +635,79 @@
                     const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
                     const headerRow = tabela.querySelector(`.header-${tipo}`);
 
+                    if (!headerRow) {
+                        console.error(`Cabeçalho não encontrado para tipo: ${tipo}`);
+                        return;
+                    }
+
                     if (dadosTipo.length === 0) {
                         const tr = document.createElement("tr");
-                        // Se a linha estiver vazia, adiciona uma linha com "--"
                         const tdVazio = document.createElement("td");
-                        tdVazio.colSpan = 6; // Colspan para ocupar todas as colunas
-                        tdVazio.textContent = "Nenhum resultado encontrado";
+                        tdVazio.colSpan = 6;
+                        tdVazio.textContent = "Nenhum resultado.";
                         tr.appendChild(tdVazio);
                         headerRow.insertAdjacentElement("afterend", tr);
-                        return; // Pula para a próxima iteração
-                    }else{
-                        dadosTipo.forEach(linha => {
-                            const tr = document.createElement("tr");
-
-                            const tdRadio = document.createElement("td");
-                            const radio = criarRadio();
-                            tdRadio.appendChild(radio);
-                            tr.appendChild(tdRadio);
-    
-                            linha.forEach(valor => {
-                                const td = document.createElement("td");
-                                td.textContent = valor || "--"; // Verifica se o valor é undefined ou null
-                                tr.appendChild(td);
-                            });
-
-                            headerRow.insertAdjacentElement("afterend", tr);
-                        });
+                        return;
                     }
+
+                    dadosTipo.forEach(linha => {
+                        const lista = {
+                            "logradouto": linha[0] || "--",
+                            "bairro": linha[1] || "--",
+                            "municipio": linha[2] || "--",
+                            "cep": linha[3] || "--",
+                            "uf": linha[4] || "--",
+                            "latitude": linha[5] || 0.0,
+                            "longitude": linha[6] || 0.0
+                        };
+
+                        const tr = document.createElement("tr");
+
+                        const tdRadio = document.createElement("td");
+                        const radio = criarRadio(lista.latitude, lista.longitude);
+                        tdRadio.appendChild(radio);
+                        tr.appendChild(tdRadio);
+
+                        for (const [key, valor] of Object.entries(lista)) {
+                            if (key !== "latitude" && key !== "longitude") {
+                                const td = document.createElement("td");
+                                td.textContent = valor;
+                                tr.appendChild(td);
+                            }
+                        }
+
+                        headerRow.insertAdjacentElement("afterend", tr);
+                    });
                 });
             })
             .catch((erro) => {
                 console.error("Erro ao buscar dados:", erro);
-                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
-                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
+                document.getElementById("carregando").style.display = "none";
+                document.getElementById("tabela-enderecos").style.display = "block";
             })
-            .finally(() => {
-                document.getElementById("carregando").style.display = "none"; // Esconde "Carregando..."
-                document.getElementById("tabela-enderecos").style.display = "block"; // Exibe a tabela
+            .finally({
+
             });
-        }{carregar_info_dados()}
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            var map = map_c8d7370c7af138f5d2b539c5578bba11;
-            Object.values(map._layers).forEach(layer => {
-                if (layer instanceof L.Marker) {
-                    layer.on('dragend', function(e) {
-                        // Atualiza as coordenadas ao arrastar o marcador
-                        var latlng = e.target.getLatLng();
-                        inserir_info_dados(latlng.lat, latlng.lng);
-                        /*if (window.updateCoords) {
-                            window.updateCoords(latlng.lat, latlng.lng);
-                            carregar_info_dados();
-                        }*/
-                    });
-                }
-            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var map = map_c8d7370c7af138f5d2b539c5578bba11;
+        Object.values(map._layers).forEach(layer => {
+            if (layer instanceof L.Marker) {
+                layer.on('dragend', function(e) {
+                    // Atualiza as coordenadas ao arrastar o marcador
+                    var latlng = e.target.getLatLng();
+                    inserir_info_dados(latlng.lat, latlng.lng);
+                });
+            }
         });
+    });
+
+    function loading_mapa(flag){
+        if (window.loadingMap) {
+            window.loadingMap(flag);
+        }
+    }
+
 </script>
 </html>

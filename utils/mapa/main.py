@@ -38,7 +38,7 @@ class MapaCEF:
         
         cef.Shutdown()
 
-    def criar_mapa(self, lat, lon, callback_info=None):
+    def criar_mapa(self, lat, lon, callback_info=None, callback_loading=None):
         # Criar o mapa HTML
         mapa = folium.Map(location=[lat, lon], zoom_start=15)
         folium.Marker(
@@ -46,108 +46,6 @@ class MapaCEF:
             popup="Arraste para mover",
             draggable=True
         ).add_to(mapa)
-        
-        script = f"""
-        const linhaSelecionada = [];
-
-        setTimeout(function() {{
-            map.setZoom(18);
-        }}, 500);
-
-        function criarRadio() {{
-            const radio = document.createElement("input");
-            radio.type = "radio";
-            radio.name = "grupo-radio";
-            radio.dataset.checked = "false";
-
-            radio.addEventListener("click", function () {{
-                if (this.dataset.checked === "true") {{
-                    this.checked = false;
-                    this.dataset.checked = "false";
-                    linhaSelecionada.length = 0;
-                }} else {{
-                    document.querySelectorAll("input[name='grupo-radio']").forEach(r => {{
-                        r.dataset.checked = "false";
-                    }});
-
-                    this.dataset.checked = "true";
-                    coletarLinhaSelecionada(this);
-                }}
-            }});
-
-            return radio;
-        }}
-
-        function coletarLinhaSelecionada(radio) {{
-            const tr = radio.closest("tr");
-            const tds = tr.querySelectorAll("td");
-
-            linhaSelecionada.length = 0;
-            for (let i = 1; i < tds.length; i++) {{
-                linhaSelecionada.push(tds[i].textContent.trim());
-            }}
-
-            console.log("Linha selecionada:", linhaSelecionada);
-            if (window.updateInfo) {{
-                window.updateInfo(linhaSelecionada);
-            }}
-        }}
-
-        fetch("http://localhost:5000/enderecos")
-            .then(res => res.json())
-            .then(dados => {{
-                const tabela = document.getElementById("tabela-enderecos");
-                const tipos = ["cep_correios", "opem_street", "dbc_logradouro"];
-
-                tipos.forEach(tipo => {{
-                    const itemEncontrado = dados.find(item => item[tipo]);
-                    const dadosTipo = (itemEncontrado && itemEncontrado[tipo]) || [];
-                    const headerRow = tabela.querySelector(`.header-${{tipo}}`);
-
-                    dadosTipo.forEach(linha => {{
-                        const tr = document.createElement("tr");
-
-                        const tdRadio = document.createElement("td");
-                        const radio = criarRadio();
-                        tdRadio.appendChild(radio);
-                        tr.appendChild(tdRadio);
-
-                        linha.forEach(valor => {{
-                            const td = document.createElement("td");
-                            td.textContent = valor;
-                            tr.appendChild(td);
-                        }});
-
-                        headerRow.insertAdjacentElement("afterend", tr);
-                    }});
-                }});
-            }})
-            .catch((erro) => {{
-                console.error("Erro ao buscar dados:", erro);
-            }});
-            
-        document.addEventListener('DOMContentLoaded', function() {{
-            var map = {{mapa.get_name()}};
-            Object.values(map._layers).forEach(layer => {{
-                if (layer instanceof L.Marker) {{
-                    layer.on('dragend', function(e) {{
-                        var latlng = e.target.getLatLng();
-                        if (window.updateCoords) {{
-                            window.updateCoords(latlng.lat, latlng.lng);
-                        }}
-                    }});
-                }}
-            }});
-        }});
-        document.addEventListener('DOMContentLoaded', function() {{
-            var map = {{mapa.get_name()}};
-            setTimeout(function() {{
-                map.setZoom(18);
-            }}, 500);
-        }});
-        """
-        mapa.get_root().html.add_child(folium.Element(script))
-        #mapa.save(self.map_file_path)
         
         # Enviar comando para a thread do CEF
         def _abrir_janela():
@@ -177,6 +75,7 @@ class MapaCEF:
 
             bindings = cef.JavascriptBindings()
             bindings.SetFunction("updateInfo", callback_info)
+            bindings.SetFunction("loadingMap", callback_loading)
             self.browser.SetJavascriptBindings(bindings)
 
             # Abre DevTools para depuração

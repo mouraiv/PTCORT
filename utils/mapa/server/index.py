@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 import os
+import time 
+from threading import Lock
 
 from utils.mapa.api.api_opemstreet import buscar_endereco_por_coordenadas
 
@@ -9,21 +11,37 @@ template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../html/
 
 # Criação do servidor Flask
 server_api = Flask(__name__, template_folder=template_dir)
+server_api.config['CEF_ENABLED'] = True
 CORS(server_api)
 
 # Variável global para armazenar os dados recebidos
 dados_salvos = []
 dados_salvos_click = []
 
+# Dados compartilhados com thread-safe
+ultima_atualizacao = 0
+data_lock = Lock()
+
+
+@server_api.route("/update-data", methods=["GET"])
+def get_update_data():
+    client_time = float(request.args.get('last_update', 0))
+    
+    with data_lock:
+        if client_time < ultima_atualizacao:
+            return jsonify({
+                "dados": dados_salvos,
+                "timestamp": ultima_atualizacao
+            })
+        return jsonify({"status": "no_update"})
+
 @server_api.route('/')
 def index():
     return render_template("map.html")  # Não precisa colocar o caminho completo, só o nome
 
-from flask import request, jsonify
-
 @server_api.route("/enderecos", methods=["POST"])
 def receber_enderecos():
-    global dados_salvos
+    global dados_salvos, ultima_atualizacao
 
     # Extrair parâmetros do JSON enviado
     dados = request.get_json()
@@ -46,6 +64,7 @@ def receber_enderecos():
     )
 
     dados_salvos = dados_enderecos
+    ultima_atualizacao = time.time()
     return jsonify({"mensagem": "Dados recebidos com sucesso!"})
 
 @server_api.route("/enderecos", methods=["GET"])
@@ -57,16 +76,25 @@ def enviar_enderecos():
         for chave, valor in item.items():
             nova_lista = []
             for sublista in valor:
-                nova_sublista = []
-                for i, v in enumerate(sublista):
-                    if isinstance(v, str):
-                        if i == len(sublista) - 1:  # último campo = UF
-                            nova_sublista.append(v.upper())
-                        else:
-                            nova_sublista.append(v.title())
-                    else:
-                        nova_sublista.append(v)
-                nova_lista.append(nova_sublista)
+                # Verifica se a sublista tem 7 itens conforme esperado
+                if len(sublista) == 7:
+                    logradouro, bairro, municipio, cep, uf, lat, lon = sublista
+                    
+                    # Formata cada campo conforme necessário
+                    nova_sublista = [
+                        logradouro.title() if isinstance(logradouro, str) and logradouro.strip() else "--",
+                        bairro.title() if isinstance(bairro, str) and bairro.strip() else "--",
+                        municipio.title() if isinstance(municipio, str) and municipio.strip() else "--",
+                        cep if isinstance(cep, str) and cep.strip() else "--",
+                        uf.upper().strip() if isinstance(uf, str) and uf.strip() else "--",
+                        float(lat) if lat else 0.0,
+                        float(lon) if lon else 0.0
+                    ]
+                    nova_lista.append(nova_sublista)
+                else:
+                    # Caso a estrutura não esteja como esperada, mantém os dados originais
+                    nova_lista.append(sublista)
+            
             novo_item[chave] = nova_lista
         dados_formatados.append(novo_item)
 
